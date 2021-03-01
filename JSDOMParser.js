@@ -35,6 +35,7 @@
     "amp": "&",
     "quot": '"',
     "apos": "'",
+    "nbsp": " ",
   };
 
   var reverseEntityTable = {
@@ -43,6 +44,7 @@
     "&": "&amp;",
     '"': "&quot;",
     "'": "&apos;",
+    " ": "&nbsp;"
   };
 
   function encodeTextContentHTML(s) {
@@ -58,7 +60,7 @@
   }
 
   function decodeHTML(str) {
-    return str.replace(/&(quot|amp|apos|lt|gt);/g, function(match, tag) {
+    return str.replace(/&(quot|amp|apos|lt|gt|nbsp);/g, function(match, tag) {
       return entityTable[tag];
     }).replace(/&#(?:x([0-9a-z]{1,4})|([0-9]{1,4}));/gi, function(match, hex, numStr) {
       var num = parseInt(hex || numStr, hex ? 16 : 10); // read num
@@ -922,26 +924,49 @@
       var name = "";
 
       var n = this.html.indexOf("=", this.currentChar);
-      if (n === -1) {
+      var w = -1;
+      for (char in whitespace) {
+        var newW = this.html.indexOf(char, this.currentChar);
+        if (newW > -1 && newW < w) {
+          w = newW;
+        }
+      }
+      var e = this.html.indexOf(">", this.currentChar);
+
+      var nextChar = n;
+      if (w > -1 && w < nextChar) {
+        nextChar = w;
+      }
+      if (e > -1 && e < nextChar) {
+        nextChar = e;
+      }
+      if (nextChar === -1) {
         this.currentChar = this.html.length;
       } else {
-        // Read until a '=' character is hit; this will be the attribute key
-        name = this.html.substring(this.currentChar, n);
-        this.currentChar = n + 1;
+        // Read until a '=', whitespace, or ">" character is hit; this will be the attribute key
+        name = this.html.substring(this.currentChar, nextChar);
+        this.currentChar = nextChar;
       }
 
-      if (!name)
-        return;
-
-      // After a '=', we should see a '"' for the attribute value
-      var c = this.nextChar();
-      if (c !== '"' && c !== "'") {
-        this.error("Error reading attribute " + name + ", expecting '\"'");
+      if (!name) {
+        this.currentChar++;
         return;
       }
 
-      // Read the attribute value (and consume the matching quote)
-      var value = this.readString(c);
+      var value = "";
+      if (nextChar === n) {
+        // Skip "="
+        this.currentChar++;
+        // After a '=', we should see a '"' for the attribute value
+        var c = this.nextChar();
+        if (c !== '"' && c !== "'") {
+          this.error("Error reading attribute " + name + ", expecting '\"'");
+          return;
+        }
+
+        // Read the attribute value (and consume the matching quote)
+        value = this.readString(c);
+      }
 
       node.attributes.push(new Attribute(name, decodeHTML(value)));
 
@@ -1135,7 +1160,7 @@
         this.readChildren(node);
         var closingTag = "</" + node._matchingTag + ">";
         if (!this.match(closingTag) && !(localName in voidElems)) {
-          this.error("expected '" + closingTag + "' and got " + this.html.substr(this.currentChar, closingTag.length));
+          this.error("expected '" + closingTag + "' and got " + this.html.substr(this.currentChar, closingTag.length) + " at " + this.currentChar);
           return null;
         }
       }

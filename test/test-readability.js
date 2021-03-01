@@ -125,14 +125,14 @@ function runTestsWithItems(label, domGenerationFn, source, expectedContent, expe
           var actualDesc = nodeStr(actualNode);
           var expectedDesc = nodeStr(expectedNode);
           if (actualDesc != expectedDesc) {
-            expect(actualDesc, findableNodeDesc(actualNode)).eql(expectedDesc);
+            expect(actualDesc, findableNodeDesc(actualNode) + `\nexpected:\n${findableNodeDesc(expectedNode)}`).eql(expectedDesc);
             return false;
           }
           // Compare text for text nodes:
           if (actualNode.nodeType == 3) {
             var actualText = htmlTransform(actualNode.textContent);
             var expectedText = htmlTransform(expectedNode.textContent);
-            expect(actualText, findableNodeDesc(actualNode)).eql(expectedText);
+            expect(actualText, findableNodeDesc(actualNode) + `\nexpected:\n${findableNodeDesc(expectedNode)}`).eql(expectedText);
             if (actualText != expectedText) {
               return false;
             }
@@ -274,6 +274,9 @@ describe("Readability API", function() {
 
 describe("Test pages", function() {
   testPages.forEach(function(testPage) {
+    if (testPage.dir !== "huxiu-1") {
+      return;
+    }
     describe(testPage.dir, function() {
       var uri = "http://fakehost/test/page.html";
 
