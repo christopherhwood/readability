@@ -1134,7 +1134,7 @@
       if (!closed) {
         this.readChildren(node);
         var closingTag = "</" + node._matchingTag + ">";
-        if (!this.match(closingTag)) {
+        if (!this.match(closingTag) && !(localName in voidElems)) {
           this.error("expected '" + closingTag + "' and got " + this.html.substr(this.currentChar, closingTag.length));
           return null;
         }
